@@ -14,8 +14,8 @@ export function useLiveKw() {
     const fetchData = async () => {
       try {
         const [liveRes, historyRes] = await Promise.all([
-          fetch("http://localhost:5000/api/live-data"),
-          fetch("http://localhost:5000/api/history")
+          fetch("/api/live-data"),
+          fetch("/api/history")
         ]);
 
         if (!liveRes.ok || !historyRes.ok) {
