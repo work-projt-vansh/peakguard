@@ -1,18 +1,48 @@
 import { useState, useEffect } from "react";
 
 /**
- * useLiveKw — simulates a WebSocket live kW reading.
- * Fluctuates between 300–720 kW every 2s.
+ * useLiveKw — fetches real-time kW readings and history from the Flask backend.
+ * Polls the backend every 3s to stay updated.
  */
-export function useLiveKw(initial = 487) {
-  const [kw, setKw] = useState(initial);
+export function useLiveKw() {
+  const [kw, setKw] = useState(0);
+  const [history, setHistory] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
   useEffect(() => {
-    const t = setInterval(() => {
-      setKw(v => Math.round(Math.max(300, Math.min(720, v + (Math.random() - 0.5) * 16))));
-    }, 2000);
+    const fetchData = async () => {
+      try {
+        const [liveRes, historyRes] = await Promise.all([
+          fetch("http://localhost:5000/api/live-data"),
+          fetch("http://localhost:5000/api/history")
+        ]);
+
+        if (!liveRes.ok || !historyRes.ok) {
+          throw new Error("Failed to fetch data from the server.");
+        }
+
+        const liveData = await liveRes.json();
+        const historyData = await historyRes.json();
+
+        setKw(liveData.load_kw);
+        setHistory(historyData);
+        setError(null);
+      } catch (err) {
+        setError(err.message);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    // Initial fetch
+    fetchData();
+
+    // Set up polling interval every 3s
+    const t = setInterval(fetchData, 3000);
+
     return () => clearInterval(t);
   }, []);
 
-  return kw;
+  return { kw, history, loading, error };
 }
